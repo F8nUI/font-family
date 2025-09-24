@@ -317,7 +317,7 @@ public extension FontFamily<SystemFontFamilyWeight> {
 
 // MARK: - SwiftUI.Font Extension
 
-public enum FontFamilyScaling {
+public enum FontFamilyScaling: Sendable {
 	case fixed
 	case textStyle(Font.TextStyle)
 }
