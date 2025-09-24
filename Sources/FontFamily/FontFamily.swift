@@ -132,7 +132,6 @@ public extension FontFamily {
 		case .fixed:
 			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
 		case .textStyle(let textStyle):
-			let size = NSFont.preferredFont(forTextStyle: textStyle.nsTextStyle()).pointSize
 			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
 		}
 		
@@ -153,8 +152,8 @@ public extension FontFamily {
 		case .fixed:
 			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
 		case .textStyle(let textStyle):
-			let size = UIFont.preferredFont(forTextStyle: textStyle.uiTextStyle()).pointSize
-			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
+			let baseFont = UIFont.init(name: Weight.defaultWeight.name, size: size) ?? font
+			font = UIFontMetrics(forTextStyle: .body).scaledFont(for: baseFont)
 		}
 		
 		return font
