@@ -51,7 +51,7 @@ import OSLog
 ///
 ///	Text("Hello World!").foundation(.font(.customBody))
 /// ```
-public struct FontFamily<Weight: FontFamilyWeight>: Sendable {
+public struct FontFamily<Weight: FontFamilyWeight>: Sendable, Hashable {
 	public init() {}
 	
 	public func callAsFunction(size: CGFloat, weight: Weight = .defaultWeight, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
@@ -131,7 +131,7 @@ public extension FontFamily {
 		switch scaling {
 		case .fixed:
 			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
-		case .textStyle(let textStyle):
+		case .textStyle:
 			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
 		}
 		
@@ -151,7 +151,7 @@ public extension FontFamily {
 		switch scaling {
 		case .fixed:
 			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
-		case .textStyle(let textStyle):
+		case .textStyle:
 			let baseFont = UIFont.init(name: Weight.defaultWeight.name, size: size) ?? font
 			font = UIFontMetrics(forTextStyle: .body).scaledFont(for: baseFont)
 		}
