@@ -5,35 +5,33 @@ import OSLog
 ///
 /// Declare custom font:
 /// ``` swift
-/// public enum CustomFontWeight: FontWeight {
-///		case light
-///		case regular
-///		case bold
+/// public enum CustomFontWeight: FontFamilyWeight {
+/// 	case thin
+/// 	case regular
+/// 	case bold
 ///
-///		public static var defaultWeight: CustomFontWeight = .regular
-///		public static var fileExtension: FontFileExtension = .otf
+/// 	public static var defaultWeight: CustomFontWeight = .regular
+/// 	public static var fileExtension: FontFileExtension = .otf
+/// 	public static let bundle: Bundle = .main
 ///
-///		// Should reflect file name – "CustonFont-Regular.otf"
-///		public var name: String {
-///			switch self {
-///				case .light: "CustomFont-Light"
-///				case .regular: "CustomFont-Regular"
-///				case .bold: "CustomFont-Bold"
-///			}
-///		}
+/// 	// Should reflect file name – "CustonFont-Regular.otf"
+/// 	public var name: String {
+/// 		switch self {
+/// 		case .thin: "CustomFont-Light"
+/// 		case .regular: "CustomFont-Regular"
+/// 		case .bold: "CustomFont-Bold"
+/// 		}
+/// 	}
 ///
-///		// Map to system's weight
-///		public func resolve() -> Font.Weight {
-///			switch self {
-///				case .thin: .thin
-///				case .regular: .regular
-///				case .bold: .bold
-///			}
-///		}
-/// }
 ///
-/// public extension Theme.Font.Family<CustomFontWeight> {
-///		static let customFont = Self()
+/// 	// Map to system's weight
+/// 	public func resolve() -> Font.Weight {
+/// 		switch self {
+/// 		case .thin: .thin
+/// 		case .regular: .regular
+/// 		case .bold: .bold
+/// 		}
+/// 	}
 /// }
 /// ```
 ///
@@ -317,7 +315,7 @@ public extension FontFamily<SystemFontFamilyWeight> {
 
 // MARK: - SwiftUI.Font Extension
 
-public enum FontFamilyScaling: Sendable {
+public enum FontFamilyScaling: Sendable, Hashable, Equatable {
 	case fixed
 	case textStyle(Font.TextStyle)
 }
