@@ -33,18 +33,23 @@ import OSLog
 /// 		}
 /// 	}
 /// }
+///
+/// public extension FontFamily<CustomFontWeight> {
+/// 	static let custom = Self()
+/// }
+///
 /// ```
 ///
 /// Use:
 /// ``` swift
 /// // Using SwiftUI's `.font` modifier:
 /// Text("Hello World!")
-///		.font(.foundationFamily(.customFont, size: 14, weight: .light))
+///		.font(.foundationFamily(.custom, size: 14, weight: .light))
 ///
 ///	// or using FoundationUI's modifier:
 ///
 ///	extension Theme.Font {
-///		static let customBody = Theme.Font.family(.customFont, size: 14, weight: .light)
+///		static let customBody = Theme.Font.family(.custom, size: 14, weight: .light)
 /// }
 ///
 ///	Text("Hello World!").foundation(.font(.customBody))
