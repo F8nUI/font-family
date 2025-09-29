@@ -5,13 +5,13 @@ import OSLog
 ///
 /// Declare custom font:
 /// ``` swift
-/// public enum CustomFontWeight: FontFamilyWeight {
+/// public enum CustomFont: FontFamily {
 /// 	case thin
 /// 	case regular
 /// 	case bold
 ///
-/// 	public static var defaultWeight: CustomFontWeight = .regular
-/// 	public static var fileExtension: FontFileExtension = .otf
+/// 	public static let `default`: CustomFont = .regular
+/// 	public static let fileExtension: FontFileExtension = .otf
 /// 	public static let bundle: Bundle = .main
 ///
 /// 	// Should reflect file name – "CustonFont-Regular.otf"
@@ -23,7 +23,6 @@ import OSLog
 /// 		}
 /// 	}
 ///
-///
 /// 	// Map to system's weight
 /// 	public func resolve() -> Font.Weight {
 /// 		switch self {
@@ -34,7 +33,7 @@ import OSLog
 /// 	}
 /// }
 ///
-/// public extension FontFamily<CustomFontWeight> {
+/// public extension FontFamily<CustomFont> {
 /// 	static let custom = Self()
 /// }
 ///
@@ -54,15 +53,15 @@ import OSLog
 ///
 ///	Text("Hello World!").foundation(.font(.customBody))
 /// ```
-public struct FontFamily<Weight: FontFamilyWeight>: Sendable, Hashable, Equatable {
+public struct FontFamilyFont<Weight: FontFamily>: Sendable, Hashable, Equatable {
 	public init() {}
 	
-	public func callAsFunction(size: CGFloat, weight: Weight = .defaultWeight, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
+	public func callAsFunction(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
 		resolve(size: size, weight: weight, scaling: scaling)
 	}
 	
-	public func resolve(size: CGFloat, weight: Weight = .defaultWeight, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
-		if Weight.self is SystemFontFamilyWeight.Type {
+	public func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
+		if Weight.self is SystemFontFamily.Type {
 			return .system(size: size, weight: weight.resolve())
 		}
 		
@@ -70,9 +69,9 @@ public struct FontFamily<Weight: FontFamilyWeight>: Sendable, Hashable, Equatabl
 		
 		switch scaling {
 		case .fixed:
-			return .custom(Weight.defaultWeight.name, fixedSize: size).weight(weight.resolve())
+			return .custom(Weight.default.name, fixedSize: size).weight(weight.resolve())
 		case .textStyle(let textStyle):
-			return .custom(Weight.defaultWeight.name, size: size, relativeTo: textStyle).weight(weight.resolve())
+			return .custom(Weight.default.name, size: size, relativeTo: textStyle).weight(weight.resolve())
 		}
 	}
 	
@@ -124,18 +123,18 @@ public struct FontFamily<Weight: FontFamilyWeight>: Sendable, Hashable, Equatabl
 }
 
 #if os(macOS)
-public extension FontFamily {
-	func resolve(size: CGFloat, weight: Weight = .defaultWeight, scaling: FontFamilyScaling = .textStyle(.body)) -> NSFont {
-		if weight is SystemFontFamilyWeight {
+public extension FontFamilyFont {
+	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> NSFont {
+		if weight is SystemFontFamily {
 			return .systemFont(ofSize: size, weight: weight.resolve())
 		}
 		Self.register()
 		var font: NSFont = .systemFont(ofSize: size)
 		switch scaling {
 		case .fixed:
-			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
+			font = .init(name: Weight.default.name, size: size) ?? font
 		case .textStyle:
-			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
+			font = .init(name: Weight.default.name, size: size) ?? font
 		}
 		
 		return font
@@ -144,18 +143,18 @@ public extension FontFamily {
 #endif
 
 #if os(iOS)
-public extension FontFamily {
-	func resolve(size: CGFloat, weight: Weight = .defaultWeight, scaling: FontFamilyScaling = .textStyle(.body)) -> UIFont {
-		if weight is SystemFontFamilyWeight {
+public extension FontFamilyFont {
+	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> UIFont {
+		if weight is SystemFontFamily {
 			return .systemFont(ofSize: size, weight: weight.resolve())
 		}
 		Self.register()
 		var font: UIFont = .systemFont(ofSize: size)
 		switch scaling {
 		case .fixed:
-			font = .init(name: Weight.defaultWeight.name, size: size) ?? font
+			font = .init(name: Weight.default.name, size: size) ?? font
 		case .textStyle:
-			let baseFont = UIFont.init(name: Weight.defaultWeight.name, size: size) ?? font
+			let baseFont = UIFont.init(name: Weight.default.name, size: size) ?? font
 			font = UIFontMetrics(forTextStyle: .body).scaledFont(for: baseFont)
 		}
 		
@@ -166,14 +165,14 @@ public extension FontFamily {
 
 // MARK: - FontFamilyWeight
 
-public protocol FontFamilyWeight: CaseIterable, Sendable, Hashable, Equatable {
+public protocol FontFamily: CaseIterable, Sendable, Hashable, Equatable {
 	var name: String { get }
 	var url: URL? { get }
 	func resolve() -> Font.Weight
 	
 	
 	static var bundle: Bundle { get }
-	static var defaultWeight: Self { get }
+	static var `default`: Self { get }
 	static var fileExtension: FontFileExtension { get }
 }
 
@@ -182,51 +181,15 @@ public enum FontFileExtension: String, Sendable {
 	case ttf = "ttf"
 }
 
-public extension FontFamilyWeight {
+public extension FontFamily {
 	static var fileExtension: FontFileExtension { .otf }
 	var url: URL? {
 		return Self.bundle.url(forResource: name, withExtension: Self.fileExtension.rawValue)
 	}
 }
 
-public enum SystemFontFamilyWeight: String, FontFamilyWeight {
-	case thin
-	case ultraLight
-	case light
-	case regular
-	case medium
-	case semibold
-	case bold
-	case heavy
-	case black
-	
-	public static let defaultWeight = Self.regular
-	
-	public var name: String {
-		"San Francisco"
-	}
-	
-	public static var bundle: Bundle { .main }
-	
-	public var url: URL? { nil }
-	
-	public func resolve() -> Font.Weight {
-		switch self {
-		case .thin: .thin
-		case .ultraLight: .ultraLight
-		case .light: .light
-		case .regular: .regular
-		case .medium: .medium
-		case .semibold: .semibold
-		case .bold: .bold
-		case .heavy: .heavy
-		case .black: .black
-		}
-	}
-}
-
 #if os(macOS)
-public extension FontFamilyWeight {
+public extension FontFamily {
 	func resolve() -> NSFont.Weight {
 		resolve().nsFontWeight()
 	}
@@ -270,7 +233,7 @@ public extension Font.TextStyle {
 #endif
 
 #if os(iOS)
-extension FontFamilyWeight {
+extension FontFamily {
 	func resolve() -> UIFont.Weight {
 		resolve().uiFontWeight()
 	}
@@ -314,7 +277,39 @@ extension Font.TextStyle {
 #endif
 
 // MARK: - System Font Family
-public extension FontFamily<SystemFontFamilyWeight> {
+public enum SystemFontFamily: String, FontFamily {
+	case thin
+	case ultraLight
+	case light
+	case regular
+	case medium
+	case semibold
+	case bold
+	case heavy
+	case black
+	
+	public var name: String { "San Francisco" }
+	public var url: URL? { nil }
+
+	public static let `default`: SystemFontFamily = .regular
+	public static let bundle: Bundle = .main
+	
+	public func resolve() -> Font.Weight {
+		switch self {
+		case .thin: .thin
+		case .ultraLight: .ultraLight
+		case .light: .light
+		case .regular: .regular
+		case .medium: .medium
+		case .semibold: .semibold
+		case .bold: .bold
+		case .heavy: .heavy
+		case .black: .black
+		}
+	}
+}
+
+public extension FontFamilyFont<SystemFontFamily> {
 	static let system = Self()
 }
 
@@ -326,23 +321,23 @@ public enum FontFamilyScaling: Sendable, Hashable, Equatable {
 }
 
 extension Font {
-	public static func fontFamily<Weight: FontFamilyWeight>(_ name: FontFamily<Weight>, size: CGFloat, weight: Weight, scaling: FontFamilyScaling = .textStyle(.body)) -> Self {
-		name.resolve(size: size, weight: weight, scaling: scaling)
+	public static func fontFamily<Weight: FontFamily>(_ font: FontFamilyFont<Weight>, size: CGFloat, weight: Weight, scaling: FontFamilyScaling = .textStyle(.body)) -> Self {
+		font.resolve(size: size, weight: weight, scaling: scaling)
 	}
 }
 
 #if os(macOS)
 extension NSFont {
-	public static func fontFamily<Weight: FontFamilyWeight>(_ name: FontFamily<Weight>, size: CGFloat, weight: Weight, scaling: FontFamilyScaling = .textStyle(.body)) -> NSFont {
-		name.resolve(size: size, weight: weight, scaling: scaling)
+	public static func fontFamily<Weight: FontFamily>(_ font: FontFamilyFont<Weight>, size: CGFloat, weight: Weight, scaling: FontFamilyScaling = .textStyle(.body)) -> NSFont {
+		font.resolve(size: size, weight: weight, scaling: scaling)
 	}
 }
 #endif
 
 #if os(iOS)
 extension UIFont {
-	public static func fontFamily<Weight: FontFamilyWeight>(_ name: FontFamily<Weight>, size: CGFloat, weight: Weight, scaling: FontFamilyScaling = .textStyle(.body)) -> UIFont {
-		name.resolve(size: size, weight: weight, scaling: scaling)
+	public static func fontFamily<Weight: FontFamily>(_ font: FontFamilyFont<Weight>, size: CGFloat, weight: Weight, scaling: FontFamilyScaling = .textStyle(.body)) -> UIFont {
+		font.resolve(size: size, weight: weight, scaling: scaling)
 	}
 }
 #endif
