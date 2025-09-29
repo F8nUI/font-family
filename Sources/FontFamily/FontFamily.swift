@@ -33,7 +33,7 @@ import OSLog
 /// 	}
 /// }
 ///
-/// public extension FontFamily<CustomFont> {
+/// public extension FontFamily.Font<CustomFont> {
 /// 	static let custom = Self()
 /// }
 ///
@@ -168,12 +168,16 @@ public extension FontFamilyFont {
 public protocol FontFamily: CaseIterable, Sendable, Hashable, Equatable {
 	var name: String { get }
 	var url: URL? { get }
-	func resolve() -> Font.Weight
+	func resolve() -> SwiftUI.Font.Weight
 	
 	
 	static var bundle: Bundle { get }
 	static var `default`: Self { get }
 	static var fileExtension: FontFileExtension { get }
+}
+
+public extension FontFamily {
+	typealias Font = FontFamilyFont
 }
 
 public enum FontFileExtension: String, Sendable {
@@ -309,7 +313,7 @@ public enum SystemFontFamily: String, FontFamily {
 	}
 }
 
-public extension FontFamilyFont<SystemFontFamily> {
+public extension FontFamily.Font<SystemFontFamily> {
 	static let system = Self()
 }
 
