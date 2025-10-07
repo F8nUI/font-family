@@ -4,21 +4,30 @@ import OSLog
 public struct FontFamilyFont<Weight: FontFamily>: Sendable, Hashable, Equatable {
 	public init() {}
 	
+	@MainActor
+	let isRegistered: Bool = {
+		Self.register()
+	}()
+	
 	public func callAsFunction(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
 		resolve(size: size, weight: weight, scaling: scaling)
 	}
-	
-	static func register() {
-		Weight.allCases.forEach {
-			guard let url = $0.url else {
-				assertionFailure("URL is `nil` – \($0)")
-				return
+}
+
+// MARK: - Register Font
+
+private extension FontFamilyFont {
+	static func register() -> Bool {
+		Weight.allCases
+			.compactMap { $0.url }
+			.forEach {
+				registerFont($0)
+				Logger(subsystem: "FoundationUI", category: "FontFamily").info("registered font: \($0.lastPathComponent)")
 			}
-			registerFont(url)
-		}
+		return true
 	}
 	
-	private static func registerFont(_ fontUrl: URL) {
+	static func registerFont(_ fontUrl: URL) {
 		if isFontRegistered(at: fontUrl) { return }
 		
 		var error: Unmanaged<CFError>?
@@ -37,7 +46,7 @@ public struct FontFamilyFont<Weight: FontFamily>: Sendable, Hashable, Equatable 
 		}
 	}
 	
-	private static func isFontRegistered(at fontUrl: URL) -> Bool {
+	static func isFontRegistered(at fontUrl: URL) -> Bool {
 		guard let fontDataProvider = CGDataProvider(url: fontUrl as CFURL),
 			  let font = CGFont(fontDataProvider),
 			  let fontName = font.postScriptName as String?
@@ -78,7 +87,7 @@ public extension FontFamilyFont {
 		if weight is SystemFontFamily {
 			return .systemFont(ofSize: size, weight: weight.resolve())
 		}
-		Self.register()
+		
 		var font: NSFont = .systemFont(ofSize: size)
 		switch scaling {
 		case .fixed:
@@ -98,7 +107,7 @@ public extension FontFamilyFont {
 		if weight is SystemFontFamily {
 			return .systemFont(ofSize: size, weight: weight.resolve())
 		}
-		Self.register()
+		
 		var font: UIFont = .systemFont(ofSize: size)
 		switch scaling {
 		case .fixed:
