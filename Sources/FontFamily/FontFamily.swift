@@ -163,25 +163,21 @@ public extension FontFamilyFont {
 /// ```
 ///
 /// Use:
-/// ``` swift
-/// // Using SwiftUI's `.font` modifier:
-/// Text("Hello World!")
-///		.font(.foundationFamily(.custom, size: 14, weight: .light))
-///
-///	// or using FoundationUI's modifier:
-///
-///	extension Theme.Font {
-///		static let customBody = Theme.Font.family(.custom, size: 14, weight: .light)
+///	``` swift
+/// extension Font {
+///		static let customBody = Font.fontFamily(.customFont, size: 14, weight: .light, scaling: .textStyle(.body))
 /// }
 ///
-///	Text("Hello World!").foundation(.font(.customBody))
+///	Text("Hello World!")
+///		.font(.customBody)
 /// ```
 public protocol FontFamily: CaseIterable, Sendable, Hashable, Equatable {
 	var name: String { get }
 	var url: URL? { get }
 	func resolve() -> SwiftUI.Font.Weight
 	
-	
+	/// Set correct bundle name where the font assets are located.
+	/// It's usually `.main` when using in Xcode Project and `.module` when using in SPM Package
 	static var bundle: Bundle { get }
 	static var `default`: Self { get }
 	static var fileExtension: FontFileExtension { get }

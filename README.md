@@ -13,15 +13,18 @@ Quick way to add custom fonts to your Xcode project or SPM package
 
 ### Add font files and set correct "Target Membership" for them
 
-### Declare Custom Font by creating "Font Weight" enum conforming to `FontFamilyWeight`:
+### Declare Custom Font by creating enum conforming to `FontFamily` protocol:
 ``` swift
-public enum CustomFontWeight: FontFamilyWeight {
+public enum CustomFont: FontFamily {
 	case light
 	case regular
 	case bold
 
-	public static var defaultWeight: CustomFontWeight = .regular
-	public static var fileExtension: FontFileExtension = .otf
+	public static let `default`: CustomFont = .regular
+	public static let fileExtension: FontFileExtension = .otf
+	// Set correct bundle name where the font assets are located.
+	// It's usually `.main` when using in Xcode Project and `.module` when using in SPM Package
+	public static let bundle: Bundle = .main
 
 	// Should reflect a font file name – "CustonFont-Regular.otf"
 	public var name: String {
@@ -40,21 +43,20 @@ public enum CustomFontWeight: FontFamilyWeight {
 		case .bold: .bold
 		}
 	}
-
-	// Set correct bundle name where the font assets are located.
-	// It's usually `.main` when using in Xcode Project and `.module` when using in SPM Package
-	public static var bundle: Bundle { .module }
 }
 
-public extension FontFamily<CustomFontWeight> {
+public extension FontFamily.Font<CustomFont> {
 	static let customFont = Self()
 }
 ```
 
-### Use them
+### Use in SwiftUI:
 
 ``` swift
-Text("Hello World!")
-	.font(.fontFamily(.customFont, size: 14, weight: .light, scaling: .textStyle(.body)))
+extension Font {
+	static let customBody = Font.fontFamily(.customFont, size: 14, weight: .light, scaling: .textStyle(.body))
+}
 
+Text("Hello World!")
+	.font(.customBody)
 ```
