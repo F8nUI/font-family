@@ -1,6 +1,120 @@
 import SwiftUI
 import OSLog
 
+public struct FontFamilyFont<Weight: FontFamily>: Sendable, Hashable, Equatable {
+	public init() {}
+	
+	public func callAsFunction(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
+		resolve(size: size, weight: weight, scaling: scaling)
+	}
+	
+	static func register() {
+		Weight.allCases.forEach {
+			guard let url = $0.url else {
+				assertionFailure("URL is `nil` – \($0)")
+				return
+			}
+			registerFont(url)
+		}
+	}
+	
+	private static func registerFont(_ fontUrl: URL) {
+		if isFontRegistered(at: fontUrl) { return }
+		
+		var error: Unmanaged<CFError>?
+		let success = CTFontManagerRegisterFontsForURL(fontUrl as CFURL, .none, &error)
+		
+		if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+			return
+		}
+		if !success {
+			let errorDescription = (error?.takeRetainedValue() as? NSError)?.localizedDescription
+			let message = ["Failed to register font.", errorDescription]
+				.compactMap({ $0 })
+				.joined(separator: "\n")
+			
+			Logger(subsystem: "FoundationUI", category: "FontFamily").error("\(message)")
+		}
+	}
+	
+	private static func isFontRegistered(at fontUrl: URL) -> Bool {
+		guard let fontDataProvider = CGDataProvider(url: fontUrl as CFURL),
+			  let font = CGFont(fontDataProvider),
+			  let fontName = font.postScriptName as String?
+		else {
+			return false
+		}
+		
+		let names = CTFontManagerCopyAvailablePostScriptNames()
+		
+		if let names = names as? [String], names.contains(fontName) {
+			return true
+		}
+		
+		return false
+	}
+}
+
+// MARK: - Resolve Font as (Font, NSFont, UIFont)
+
+public extension FontFamilyFont {
+	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
+		if Weight.self is SystemFontFamily.Type {
+			return .system(size: size, weight: weight.resolve())
+		}
+		
+		switch scaling {
+		case .fixed:
+			return .custom(Weight.default.name, fixedSize: size).weight(weight.resolve())
+		case .textStyle(let textStyle):
+			return .custom(Weight.default.name, size: size, relativeTo: textStyle).weight(weight.resolve())
+		}
+	}
+}
+
+#if os(macOS)
+public extension FontFamilyFont {
+	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> NSFont {
+		if weight is SystemFontFamily {
+			return .systemFont(ofSize: size, weight: weight.resolve())
+		}
+		Self.register()
+		var font: NSFont = .systemFont(ofSize: size)
+		switch scaling {
+		case .fixed:
+			font = .init(name: weight.name, size: size) ?? font
+		case .textStyle:
+			font = .init(name: weight.name, size: size) ?? font
+		}
+		
+		return font
+	}
+}
+#endif
+
+#if os(iOS)
+public extension FontFamilyFont {
+	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> UIFont {
+		if weight is SystemFontFamily {
+			return .systemFont(ofSize: size, weight: weight.resolve())
+		}
+		Self.register()
+		var font: UIFont = .systemFont(ofSize: size)
+		switch scaling {
+		case .fixed:
+			font = .init(name: weight.name, size: size) ?? font
+		case .textStyle:
+			let baseFont = UIFont.init(name: weight.name, size: size) ?? font
+			font = UIFontMetrics(forTextStyle: .body).scaledFont(for: baseFont)
+		}
+		
+		return font
+	}
+}
+#endif
+
+// MARK: - FontFamilyWeight
+
 /// Add font files and set correct "Target Membership" for them
 ///
 /// Declare custom font:
@@ -53,118 +167,6 @@ import OSLog
 ///
 ///	Text("Hello World!").foundation(.font(.customBody))
 /// ```
-public struct FontFamilyFont<Weight: FontFamily>: Sendable, Hashable, Equatable {
-	public init() {}
-	
-	public func callAsFunction(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
-		resolve(size: size, weight: weight, scaling: scaling)
-	}
-	
-	public func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
-		if Weight.self is SystemFontFamily.Type {
-			return .system(size: size, weight: weight.resolve())
-		}
-		
-		Self.register()
-		
-		switch scaling {
-		case .fixed:
-			return .custom(Weight.default.name, fixedSize: size).weight(weight.resolve())
-		case .textStyle(let textStyle):
-			return .custom(Weight.default.name, size: size, relativeTo: textStyle).weight(weight.resolve())
-		}
-	}
-	
-	static func register() {
-		Weight.allCases.forEach {
-			guard let url = $0.url else {
-				assertionFailure("URL is `nil` – \($0)")
-				return
-			}
-			registerFont(url)
-		}
-	}
-	
-	private static func registerFont(_ fontUrl: URL) {
-		if isFontRegistered(at: fontUrl) { return }
-		
-		var error: Unmanaged<CFError>?
-		let success = CTFontManagerRegisterFontsForURL(fontUrl as CFURL, .none, &error)
-		
-		if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
-			return
-		}
-		if !success {
-			let errorDescription = (error?.takeRetainedValue() as? NSError)?.localizedDescription
-			let message = ["Failed to register font.", errorDescription]
-				.compactMap({ $0 })
-				.joined(separator: "\n")
-			
-			Logger(subsystem: "FoundationUI", category: "FontFamily").error("\(message)")
-		}
-	}
-	
-	private static func isFontRegistered(at fontUrl: URL) -> Bool {
-		guard let fontDataProvider = CGDataProvider(url: fontUrl as CFURL),
-			  let font = CGFont(fontDataProvider),
-			  let fontName = font.postScriptName as String?
-		else {
-			return false
-		}
-		
-		let names = CTFontManagerCopyAvailablePostScriptNames()
-		
-		if let names = names as? [String], names.contains(fontName) {
-			return true
-		}
-		
-		return false
-	}
-}
-
-#if os(macOS)
-public extension FontFamilyFont {
-	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> NSFont {
-		if weight is SystemFontFamily {
-			return .systemFont(ofSize: size, weight: weight.resolve())
-		}
-		Self.register()
-		var font: NSFont = .systemFont(ofSize: size)
-		switch scaling {
-		case .fixed:
-			font = .init(name: Weight.default.name, size: size) ?? font
-		case .textStyle:
-			font = .init(name: Weight.default.name, size: size) ?? font
-		}
-		
-		return font
-	}
-}
-#endif
-
-#if os(iOS)
-public extension FontFamilyFont {
-	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> UIFont {
-		if weight is SystemFontFamily {
-			return .systemFont(ofSize: size, weight: weight.resolve())
-		}
-		Self.register()
-		var font: UIFont = .systemFont(ofSize: size)
-		switch scaling {
-		case .fixed:
-			font = .init(name: Weight.default.name, size: size) ?? font
-		case .textStyle:
-			let baseFont = UIFont.init(name: Weight.default.name, size: size) ?? font
-			font = UIFontMetrics(forTextStyle: .body).scaledFont(for: baseFont)
-		}
-		
-		return font
-	}
-}
-#endif
-
-// MARK: - FontFamilyWeight
-
 public protocol FontFamily: CaseIterable, Sendable, Hashable, Equatable {
 	var name: String { get }
 	var url: URL? { get }
@@ -281,6 +283,7 @@ extension Font.TextStyle {
 #endif
 
 // MARK: - System Font Family
+
 public enum SystemFontFamily: String, FontFamily {
 	case thin
 	case ultraLight
