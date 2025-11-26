@@ -68,32 +68,29 @@ private extension FontFamilyFont {
 
 public extension FontFamilyFont {
 	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> SwiftUI.Font {
-		if Weight.self is SystemFontFamily.Type {
-			return .system(size: size, weight: weight.resolve())
-		}
-		
 		switch scaling {
 		case .fixed:
-			return .custom(Weight.default.name, fixedSize: size).weight(weight.resolve())
+			.custom(Weight.default.name, fixedSize: size).weight(weight.resolve())
 		case .textStyle(let textStyle):
-			return .custom(Weight.default.name, size: size, relativeTo: textStyle).weight(weight.resolve())
+			.custom(Weight.default.name, size: size, relativeTo: textStyle).weight(weight.resolve())
 		}
 	}
 }
 
-#if os(macOS)
+#if os(iOS)
 public extension FontFamilyFont {
-	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> NSFont {
+	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> UIFont {
+		var font: UIFont
 		if weight is SystemFontFamily {
-			return .systemFont(ofSize: size, weight: weight.resolve())
+			font = .systemFont(ofSize: size, weight: weight.resolve())
+		} else {
+			font = .init(name: weight.name, size: size) ?? .systemFont(ofSize: size, weight: weight.resolve())
 		}
-		
-		var font: NSFont = .systemFont(ofSize: size)
 		switch scaling {
 		case .fixed:
-			font = .init(name: weight.name, size: size) ?? font
-		case .textStyle:
-			font = .init(name: weight.name, size: size) ?? font
+			break
+		case .textStyle(let style):
+			font = UIFontMetrics(forTextStyle: style.uiFontTextStyle).scaledFont(for: font)
 		}
 		
 		return font
@@ -101,21 +98,17 @@ public extension FontFamilyFont {
 }
 #endif
 
-#if os(iOS)
+#if os(macOS)
 public extension FontFamilyFont {
-	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> UIFont {
+	func resolve(size: CGFloat, weight: Weight = .default, scaling: FontFamilyScaling = .textStyle(.body)) -> NSFont {
+		var font: NSFont
 		if weight is SystemFontFamily {
-			return .systemFont(ofSize: size, weight: weight.resolve())
+			font = .systemFont(ofSize: size, weight: weight.resolve())
+		} else {
+			font = .init(name: weight.name, size: size) ?? .systemFont(ofSize: size, weight: weight.resolve())
 		}
 		
-		var font: UIFont = .systemFont(ofSize: size)
-		switch scaling {
-		case .fixed:
-			font = .init(name: weight.name, size: size) ?? font
-		case .textStyle:
-			let baseFont = UIFont.init(name: weight.name, size: size) ?? font
-			font = UIFontMetrics(forTextStyle: .body).scaledFont(for: baseFont)
-		}
+		// Scaling is not used on macOS
 		
 		return font
 	}
@@ -300,7 +293,7 @@ public enum SystemFontFamily: String, FontFamily {
 	case heavy
 	case black
 	
-	public var name: String { "San Francisco" }
+	public var name: String { ".AppleSystemUIFont" }
 	public var url: URL? { nil }
 
 	public static let `default`: SystemFontFamily = .regular
@@ -332,6 +325,25 @@ public enum FontFamilyScaling: Sendable, Hashable, Equatable {
 	case textStyle(Font.TextStyle)
 }
 
+extension Font.TextStyle {
+	var uiFontTextStyle: UIFont.TextStyle {
+		switch self {
+		case .body: .body
+		case .callout: .callout
+		case .caption: .caption1
+		case .caption2: .caption2
+		case .footnote: .footnote
+		case .headline: .headline
+		case .largeTitle: .largeTitle
+		case .subheadline: .subheadline
+		case .title: .title1
+		case .title2: .title2
+		case .title3: .title3
+		@unknown default: .body
+		}
+	}
+}
+
 extension Font {
 	public static func fontFamily<Weight: FontFamily>(_ font: FontFamilyFont<Weight>, size: CGFloat, weight: Weight, scaling: FontFamilyScaling = .textStyle(.body)) -> Self {
 		font.resolve(size: size, weight: weight, scaling: scaling)
@@ -353,3 +365,39 @@ extension UIFont {
 	}
 }
 #endif
+
+
+#Preview {
+	HStack {
+		VStack {
+			Text("Scalable")
+				.dynamicTypeSize(.small)
+			Text("Scalable")
+				.dynamicTypeSize(.large)
+			Text("Scalable")
+				.dynamicTypeSize(.accessibility1)
+		}
+		.font(.body.weight(.bold))
+		let uiFont = UIFont.fontFamily(.system, size: 17, weight: .bold, scaling: .textStyle(.body))
+		VStack {
+			Text("Scalable")
+				.dynamicTypeSize(.small)
+			Text("Scalable")
+				.dynamicTypeSize(.large)
+			Text("Scalable")
+				.dynamicTypeSize(.accessibility1)
+		}
+		// UIFont is not "scalable" in SwiftUI environment
+		.font(.init(uiFont))
+		VStack {
+			Text("Scalable")
+				.dynamicTypeSize(.small)
+			Text("Scalable")
+				.dynamicTypeSize(.large)
+			Text("Scalable")
+				.dynamicTypeSize(.accessibility1)
+		}
+		.font(.fontFamily(.system, size: 17, weight: .bold, scaling: .textStyle(.body)))
+	}
+	.frame(minWidth: 200, minHeight: 200)
+}
