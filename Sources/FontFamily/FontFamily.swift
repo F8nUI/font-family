@@ -326,7 +326,12 @@ public enum FontFamilyScaling: Sendable, Hashable, Equatable {
 }
 
 extension Font.TextStyle {
-	var uiFontTextStyle: UIFont.TextStyle {
+	#if os(iOS)
+	typealias PlatformTextStyle = UIFont.TextStyle
+	#elseif os(macOS)
+	typealias PlatformTextStyle = NSFont.TextStyle
+	#endif
+	var uiFontTextStyle: PlatformTextStyle {
 		switch self {
 		case .body: .body
 		case .callout: .callout
@@ -378,6 +383,7 @@ extension UIFont {
 				.dynamicTypeSize(.accessibility1)
 		}
 		.font(.body.weight(.bold))
+		#if os(iOS)
 		let uiFont = UIFont.fontFamily(.system, size: 17, weight: .bold, scaling: .textStyle(.body))
 		VStack {
 			Text("Scalable")
@@ -389,6 +395,7 @@ extension UIFont {
 		}
 		// UIFont is not "scalable" in SwiftUI environment
 		.font(.init(uiFont))
+		#endif
 		VStack {
 			Text("Scalable")
 				.dynamicTypeSize(.small)
